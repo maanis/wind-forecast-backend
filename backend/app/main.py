@@ -1,4 +1,5 @@
 from datetime import date
+import logging
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
@@ -7,11 +8,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import metrics, pipeline, store
 from .config import CORS_ORIGINS, DEFAULT_CUTOFF, TZ
 
+logger = logging.getLogger(__name__)
 app = FastAPI(title="UK Wind Forecast Accuracy API", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS,
                    allow_methods=["GET"], allow_headers=["*"])
 
 DEFAULT_START, DEFAULT_END = "2026-01-01", "2026-01-31"
+
+
+@app.on_event("startup")
+def log_data_paths():
+    logger.info(
+        "Configured data directory: %s (actuals exists=%s, forecasts exists=%s)",
+        store.config.DATA_DIR,
+        store.config.ACTUALS_FILE.is_file(),
+        store.config.FORECASTS_FILE.is_file(),
+    )
 
 
 def _clean(df: pd.DataFrame) -> list[dict]:
